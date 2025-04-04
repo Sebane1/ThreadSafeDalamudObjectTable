@@ -1,5 +1,7 @@
 using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Statuses;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Utility;
 using Lumina.Excel;
@@ -9,7 +11,7 @@ using System.Numerics;
 
 namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
 {
-    public class ThreadSafeGameObject : IGameObject, ICharacter
+    public class ThreadSafeGameObject : IGameObject, ICharacter, IPlayerCharacter
     {
         string _json = "";
         private nint _address;
@@ -50,6 +52,17 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         private bool _isTargetable;
         private ObjectKind _objectKind;
         private DateTime _lastUpdated;
+        private RowRef<World> _currentWorld;
+        private RowRef<World> _homeWorld;
+        private StatusList _statusList;
+        private bool _isCasting;
+        private bool _isCastInterruptible;
+        private byte _castActionType;
+        private uint _castActionId;
+        private ulong _castTargetObjectId;
+        private float _currentCastTime;
+        private float _baseCastTime;
+        private float _totalCastTime;
 
         public ThreadSafeGameObject(IGameObject gameObject, bool isTarget = false)
         {
@@ -102,6 +115,28 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         public uint MaxCp { get => _maxCp; set => _maxCp = value; }
         public RowRef<Mount>? CurrentMount { get => _currentMount; set => _currentMount = value; }
 
+
+        public RowRef<World> HomeWorld => _homeWorld;
+
+        public StatusList StatusList => _statusList;
+
+        public bool IsCasting => _isCasting;
+
+        public bool IsCastInterruptible => _isCastInterruptible;
+
+        public byte CastActionType => _castActionType;
+
+        public uint CastActionId => _castActionId;
+
+        public ulong CastTargetObjectId => _castTargetObjectId;
+
+        public float CurrentCastTime => _currentCastTime;
+
+        public float BaseCastTime => _baseCastTime;
+
+        public float TotalCastTime => _totalCastTime;
+
+        public RowRef<World> CurrentWorld { get => _currentWorld; set => _currentWorld = value; }
 
         public void UpdateData(IGameObject gameObject, bool isTarget = false)
         {
@@ -156,6 +191,21 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                 _onlineStatus = character.OnlineStatus;
                 _level = character.Level;
                 _currentMount = character.CurrentMount;
+            }
+            IPlayerCharacter playerCharacter = gameObject as IPlayerCharacter;
+            if (playerCharacter != null)
+            {
+                _currentWorld = playerCharacter.CurrentWorld;
+                _homeWorld = playerCharacter.HomeWorld;
+                _statusList = playerCharacter.StatusList;
+                _isCasting = playerCharacter.IsCasting;
+                _isCastInterruptible = playerCharacter.IsCastInterruptible;
+                _castActionType = playerCharacter.CastActionType;
+                _castActionId = playerCharacter.CastActionId;
+                _castTargetObjectId = playerCharacter.CastTargetObjectId;
+                _currentCastTime = playerCharacter.CurrentCastTime;
+                _baseCastTime = playerCharacter.BaseCastTime;
+                _totalCastTime = playerCharacter.TotalCastTime;
             }
             _lastUpdated = DateTime.Now;
         }

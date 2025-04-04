@@ -1,25 +1,29 @@
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
-using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
-namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
-{
-    public class ThreadSafeGameObjectManager
-    {
-        static ConcurrentDictionary<nint, ThreadSafeGameObject> _safeGameObjectTable = new ConcurrentDictionary<nint, ThreadSafeGameObject>();
-        public ThreadSafeGameObject LocalPlayer
-        {
-            get
-            {
+namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable {
+    public class ThreadSafeGameObjectManager : IObjectTable {
+        static ConcurrentDictionary<nint, ThreadSafeGameObject> _safeGameObjectDictionary = new ConcurrentDictionary<nint, ThreadSafeGameObject>();
+        static ConcurrentDictionary<int, ThreadSafeGameObject> _safeGameObjectByIndex = new ConcurrentDictionary<int, ThreadSafeGameObject>();
+        static ConcurrentDictionary<uint, ThreadSafeGameObject> _safeGameObjectByEntityId = new ConcurrentDictionary<uint, ThreadSafeGameObject>();
+        static ConcurrentDictionary<ulong, ThreadSafeGameObject> _safeGameObjectByGameObjectId = new ConcurrentDictionary<ulong, ThreadSafeGameObject>();
+        public ThreadSafeGameObject LocalPlayer {
+            get {
                 return _localPlayer;
             }
         }
 
-        public static ConcurrentDictionary<nint, ThreadSafeGameObject> SafeGameObjectTable { get => _safeGameObjectTable; set => _safeGameObjectTable = value; }
+        public static ConcurrentDictionary<nint, ThreadSafeGameObject> SafeGameObjectDictionary { get => _safeGameObjectDictionary; set => _safeGameObjectDictionary = value; }
+
+        public nint Address => _address;
+
+        public int Length => _length;
+        public IGameObject? this[int index] => throw new NotImplementedException();
 
         private IClientState _clientState;
         private IObjectTable _objectTable;
@@ -29,9 +33,10 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         Stopwatch _rateLimitTimer = new Stopwatch();
         int _updateRate = 10;
         private ThreadSafeGameObject _localPlayer;
+        private nint _address;
+        private int _length;
 
-        public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog)
-        {
+        public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog) {
             _clientState = clientState;
             _objectTable = objectTable;
             _framework = framework;
@@ -40,28 +45,20 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             _rateLimitTimer.Start();
         }
 
-        private void _framework_Update(IFramework framework)
-        {
-            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn)
-            {
-                if (_rateLimitTimer.ElapsedMilliseconds > _updateRate)
-                {
-                    if (_localPlayer == null)
-                    {
+        private void _framework_Update(IFramework framework) {
+            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn) {
+                if (_rateLimitTimer.ElapsedMilliseconds > _updateRate) {
+                    _address = _objectTable.Address;
+                    _length = _objectTable.Length;
+                    if (_localPlayer == null) {
                         _localPlayer = new ThreadSafeGameObject(_clientState.LocalPlayer);
-                    }
-                    else
-                    {
+                    } else {
                         _localPlayer.UpdateData(_localPlayer);
                     }
-                    foreach (var gameObject in _objectTable)
-                    {
-                        try
-                        {
+                    foreach (var gameObject in _objectTable) {
+                        try {
                             RefreshByManualProperties(gameObject);
-                        }
-                        catch (Exception ex)
-                        {
+                        } catch (Exception ex) {
                             _pluginLog.Warning(ex, ex.Message);
                         }
                     }
@@ -69,25 +66,49 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                 }
             }
         }
-        public static ThreadSafeGameObject GetThreadsafeGameObject(IGameObject gameObject)
-        {
-            if (!ThreadSafeGameObjectManager.SafeGameObjectTable.ContainsKey(gameObject.Address))
-            {
-                ThreadSafeGameObjectManager.SafeGameObjectTable[gameObject.Address] = new ThreadSafeGameObject(gameObject);
+        public static ThreadSafeGameObject GetThreadsafeGameObject(IGameObject gameObject) {
+            if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address)) {
+                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject);
             }
-            return ThreadSafeGameObjectManager.SafeGameObjectTable[gameObject.Address];
+            return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }
 
-        private void RefreshByManualProperties(IGameObject gameObject)
-        {
-            if (!_safeGameObjectTable.ContainsKey(gameObject.Address))
-            {
-                _safeGameObjectTable[gameObject.Address] = new ThreadSafeGameObject(gameObject);
+        private void RefreshByManualProperties(IGameObject gameObject) {
+            ThreadSafeGameObject value = null;
+            if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address)) {
+                _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject);
+                value = _safeGameObjectDictionary[gameObject.Address];
+            } else {
+                value = _safeGameObjectDictionary[gameObject.Address];
+                value.UpdateData(gameObject);
             }
-            else
-            {
-                _safeGameObjectTable[gameObject.Address].UpdateData(gameObject);
-            }
+            _safeGameObjectByEntityId[gameObject.EntityId] = value;
+            _safeGameObjectByGameObjectId[gameObject.GameObjectId] = value;
+            _safeGameObjectByIndex[gameObject.ObjectIndex] = value;
+        }
+
+        public IGameObject? SearchById(ulong gameObjectId) {
+            return _safeGameObjectByGameObjectId[gameObjectId];
+        }
+
+        public IGameObject? SearchByEntityId(uint entityId) {
+            return _safeGameObjectByEntityId[entityId];
+        }
+
+        public nint GetObjectAddress(int index) {
+            return _safeGameObjectByIndex[index].Address;
+        }
+
+        public IGameObject? CreateObjectReference(nint address) {
+            return _objectTable.CreateObjectReference(address);
+        }
+
+        public IEnumerator<IGameObject> GetEnumerator() {
+            return SafeGameObjectDictionary.Values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return GetEnumerator();
         }
     }
 }

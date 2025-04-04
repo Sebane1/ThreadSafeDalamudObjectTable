@@ -23,7 +23,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable {
         public nint Address => _address;
 
         public int Length => _length;
-        public IGameObject? this[int index] => throw new NotImplementedException();
+        public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
         private IClientState _clientState;
         private IObjectTable _objectTable;

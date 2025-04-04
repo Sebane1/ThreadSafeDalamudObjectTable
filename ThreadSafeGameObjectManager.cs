@@ -15,11 +15,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         {
             get
             {
-                if (_safeGameObjectTable.Values.Count > 0)
-                {
-                    return _safeGameObjectTable.ElementAt(0).Value;
-                }
-                return null;
+                return _localPlayer;
             }
         }
 
@@ -32,6 +28,8 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
 
         Stopwatch _rateLimitTimer = new Stopwatch();
         int _updateRate = 10;
+        private ThreadSafeGameObject _localPlayer;
+
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog)
         {
             _clientState = clientState;
@@ -48,6 +46,14 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             {
                 if (_rateLimitTimer.ElapsedMilliseconds > _updateRate)
                 {
+                    if (_localPlayer == null)
+                    {
+                        _localPlayer = new ThreadSafeGameObject(_clientState.LocalPlayer);
+                    }
+                    else
+                    {
+                        _localPlayer.UpdateData(_localPlayer);
+                    }
                     foreach (var gameObject in _objectTable)
                     {
                         try

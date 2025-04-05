@@ -31,7 +31,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable {
         private IPluginLog _pluginLog;
 
         Stopwatch _rateLimitTimer = new Stopwatch();
-        int _updateRate = 10;
+        int _updateRate = 200;
         private ThreadSafeGameObject _localPlayer;
         private nint _address;
         private int _length;

@@ -47,7 +47,16 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             _framework = framework;
             _pluginLog = pluginLog;
             _framework.Update += _framework_Update;
+            _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _rateLimitTimer.Start();
+        }
+
+        private void _clientState_TerritoryChanged(ushort obj)
+        {
+            _safeGameObjectDictionary.Clear();
+            _safeGameObjectByIndex.Clear();
+            _safeGameObjectByEntityId.Clear();
+            _safeGameObjectByGameObjectId.Clear();
         }
 
         private void _framework_Update(IFramework framework)

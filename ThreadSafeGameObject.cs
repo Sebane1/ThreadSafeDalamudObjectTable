@@ -140,74 +140,81 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
 
         public void UpdateData(IGameObject gameObject, bool isTarget = false)
         {
-            _address = gameObject.Address;
-            _name = gameObject.Name.TextValue;
-            _position = gameObject.Position;
-            _rotation = gameObject.Rotation;
-            _dataId = gameObject.DataId;
-            _entityId = gameObject.EntityId;
-            _gameObjectId = gameObject.GameObjectId;
-            _isDead = gameObject.IsDead;
-            _hitboxRadius = gameObject.HitboxRadius;
-            _objectIndex = gameObject.ObjectIndex;
-            _subKind = gameObject.SubKind;
-            _targetObjectId = gameObject.TargetObjectId;
-            _yalmDistanceX = gameObject.YalmDistanceX;
-            _yalmDistanceZ = gameObject.YalmDistanceZ;
-            _getMapCoordinates = gameObject.GetMapCoordinates();
-            _ownerId = gameObject.OwnerId;
-            _objectKind = gameObject.ObjectKind;
-            if (!isTarget)
+            if (gameObject != null)
             {
-                if (gameObject.TargetObject != null)
+                try
                 {
-                    _targetObject = ThreadSafeGameObjectManager.GetThreadsafeGameObject(gameObject.TargetObject);
-                }
-                else
-                {
-                    _targetObject = null;
-                }
-            }
-            _isTargetable = gameObject.IsTargetable;
+                    _address = gameObject.Address;
+                    _name = gameObject.Name.TextValue;
+                    _position = gameObject.Position;
+                    _rotation = gameObject.Rotation;
+                    _dataId = gameObject.DataId;
+                    _entityId = gameObject.EntityId;
+                    _gameObjectId = gameObject.GameObjectId;
+                    _isDead = gameObject.IsDead;
+                    _hitboxRadius = gameObject.HitboxRadius;
+                    _objectIndex = gameObject.ObjectIndex;
+                    _subKind = gameObject.SubKind;
+                    _targetObjectId = gameObject.TargetObjectId;
+                    _yalmDistanceX = gameObject.YalmDistanceX;
+                    _yalmDistanceZ = gameObject.YalmDistanceZ;
+                    _getMapCoordinates = gameObject.GetMapCoordinates();
+                    _ownerId = gameObject.OwnerId;
+                    _objectKind = gameObject.ObjectKind;
+                    if (!isTarget)
+                    {
+                        if (gameObject.TargetObject != null)
+                        {
+                            _targetObject = ThreadSafeGameObjectManager.GetThreadsafeGameObject(gameObject.TargetObject);
+                        }
+                        else
+                        {
+                            _targetObject = null;
+                        }
+                    }
+                    _isTargetable = gameObject.IsTargetable;
 
-            ICharacter character = gameObject as ICharacter;
-            if (character != null)
-            {
-                _customize = character.Customize;
-                _classJob = character.ClassJob;
-                _companyTag = character.CompanyTag;
-                _currentCp = character.CurrentCp;
-                _currentMp = character.CurrentMp;
-                _currentGp = character.CurrentGp;
-                _currentHp = character.CurrentHp;
-                _maxHp = character.MaxHp;
-                _maxMp = character.MaxMp;
-                _maxGp = character.MaxGp;
-                _maxCp = character.MaxCp;
-                _currentMinion = character.CurrentMinion;
-                _nameId = character.NameId;
-                _shieldPercentage = character.ShieldPercentage;
-                _statusFlags = character.StatusFlags;
-                _onlineStatus = character.OnlineStatus;
-                _level = character.Level;
-                _currentMount = character.CurrentMount;
+                    ICharacter character = gameObject as ICharacter;
+                    if (character != null)
+                    {
+                        _customize = character.Customize;
+                        _classJob = character.ClassJob;
+                        _companyTag = character.CompanyTag;
+                        _currentCp = character.CurrentCp;
+                        _currentMp = character.CurrentMp;
+                        _currentGp = character.CurrentGp;
+                        _currentHp = character.CurrentHp;
+                        _maxHp = character.MaxHp;
+                        _maxMp = character.MaxMp;
+                        _maxGp = character.MaxGp;
+                        _maxCp = character.MaxCp;
+                        _currentMinion = character.CurrentMinion;
+                        _nameId = character.NameId;
+                        _shieldPercentage = character.ShieldPercentage;
+                        _statusFlags = character.StatusFlags;
+                        _onlineStatus = character.OnlineStatus;
+                        _level = character.Level;
+                        _currentMount = character.CurrentMount;
+                    }
+                    IPlayerCharacter playerCharacter = gameObject as IPlayerCharacter;
+                    if (playerCharacter != null)
+                    {
+                        _currentWorld = playerCharacter.CurrentWorld;
+                        _homeWorld = playerCharacter.HomeWorld;
+                        _statusList = playerCharacter.StatusList;
+                        _isCasting = playerCharacter.IsCasting;
+                        _isCastInterruptible = playerCharacter.IsCastInterruptible;
+                        _castActionType = playerCharacter.CastActionType;
+                        _castActionId = playerCharacter.CastActionId;
+                        _castTargetObjectId = playerCharacter.CastTargetObjectId;
+                        _currentCastTime = playerCharacter.CurrentCastTime;
+                        _baseCastTime = playerCharacter.BaseCastTime;
+                        _totalCastTime = playerCharacter.TotalCastTime;
+                    }
+                    _lastUpdated = DateTime.Now;
+                }
+                catch { }
             }
-            IPlayerCharacter playerCharacter = gameObject as IPlayerCharacter;
-            if (playerCharacter != null)
-            {
-                _currentWorld = playerCharacter.CurrentWorld;
-                _homeWorld = playerCharacter.HomeWorld;
-                _statusList = playerCharacter.StatusList;
-                _isCasting = playerCharacter.IsCasting;
-                _isCastInterruptible = playerCharacter.IsCastInterruptible;
-                _castActionType = playerCharacter.CastActionType;
-                _castActionId = playerCharacter.CastActionId;
-                _castTargetObjectId = playerCharacter.CastTargetObjectId;
-                _currentCastTime = playerCharacter.CurrentCastTime;
-                _baseCastTime = playerCharacter.BaseCastTime;
-                _totalCastTime = playerCharacter.TotalCastTime;
-            }
-            _lastUpdated = DateTime.Now;
         }
 
         public bool IsValid()

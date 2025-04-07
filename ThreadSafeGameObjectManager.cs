@@ -94,11 +94,11 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                 }
             }
         }
-        public static ThreadSafeGameObject GetThreadsafeGameObject(IGameObject gameObject)
+        public static ThreadSafeGameObject GetThreadsafeGameObject(IGameObject gameObject, bool isTarget)
         {
             if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address))
             {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject);
+                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject, true);
             }
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }

@@ -165,7 +165,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                     {
                         if (gameObject.TargetObject != null)
                         {
-                            _targetObject = ThreadSafeGameObjectManager.GetThreadsafeGameObject(gameObject.TargetObject);
+                            _targetObject = ThreadSafeGameObjectManager.GetThreadsafeGameObject(gameObject.TargetObject, true);
                         }
                         else
                         {

@@ -6,18 +6,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
-{
-    public class ThreadSafeGameObjectManager : IObjectTable, IDisposable
-    {
+namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable {
+    public class ThreadSafeGameObjectManager : IObjectTable, IDisposable {
         static ConcurrentDictionary<nint, ThreadSafeGameObject> _safeGameObjectDictionary = new ConcurrentDictionary<nint, ThreadSafeGameObject>();
         static ConcurrentDictionary<int, ThreadSafeGameObject> _safeGameObjectByIndex = new ConcurrentDictionary<int, ThreadSafeGameObject>();
         static ConcurrentDictionary<uint, ThreadSafeGameObject> _safeGameObjectByEntityId = new ConcurrentDictionary<uint, ThreadSafeGameObject>();
         static ConcurrentDictionary<ulong, ThreadSafeGameObject> _safeGameObjectByGameObjectId = new ConcurrentDictionary<ulong, ThreadSafeGameObject>();
-        public ThreadSafeGameObject LocalPlayer
-        {
-            get
-            {
+        public ThreadSafeGameObject LocalPlayer {
+            get {
                 return _localPlayer;
             }
         }
@@ -40,8 +36,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         private nint _address;
         private int _length;
 
-        public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog)
-        {
+        public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog) {
             _clientState = clientState;
             _objectTable = objectTable;
             _framework = framework;
@@ -51,42 +46,29 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             _rateLimitTimer.Start();
         }
 
-        private void _clientState_TerritoryChanged(ushort obj)
-        {
+        private void _clientState_TerritoryChanged(ushort obj) {
             _safeGameObjectDictionary.Clear();
             _safeGameObjectByIndex.Clear();
             _safeGameObjectByEntityId.Clear();
             _safeGameObjectByGameObjectId.Clear();
         }
 
-        private void _framework_Update(IFramework framework)
-        {
-            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn)
-            {
-                if (_rateLimitTimer.ElapsedMilliseconds > _updateRate)
-                {
+        private void _framework_Update(IFramework framework) {
+            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn) {
+                if (_rateLimitTimer.ElapsedMilliseconds > _updateRate) {
                     _address = _objectTable.Address;
                     _length = _objectTable.Length;
-                    if (_clientState.LocalPlayer == null)
-                    {
+                    if (_clientState.LocalPlayer == null) {
                         _localPlayer = null;
-                    }
-                    else if (_localPlayer == null)
-                    {
+                    } else if (_localPlayer == null) {
                         _localPlayer = new ThreadSafeGameObject(_clientState.LocalPlayer);
-                    }
-                    else
-                    {
+                    } else {
                         _localPlayer.UpdateData(_clientState.LocalPlayer);
                     }
-                    foreach (var gameObject in _objectTable)
-                    {
-                        try
-                        {
+                    foreach (var gameObject in _objectTable) {
+                        try {
                             RefreshByManualProperties(gameObject);
-                        }
-                        catch (Exception ex)
-                        {
+                        } catch (Exception ex) {
                             _pluginLog.Warning(ex, ex.Message);
                         }
                     }
@@ -103,16 +85,12 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }
 
-        private void RefreshByManualProperties(IGameObject gameObject)
-        {
+        private void RefreshByManualProperties(IGameObject gameObject) {
             ThreadSafeGameObject value = null;
-            if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address))
-            {
+            if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address)) {
                 _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject);
                 value = _safeGameObjectDictionary[gameObject.Address];
-            }
-            else
-            {
+            } else {
                 value = _safeGameObjectDictionary[gameObject.Address];
                 value.UpdateData(gameObject);
             }
@@ -121,38 +99,43 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             _safeGameObjectByIndex[gameObject.ObjectIndex] = value;
         }
 
-        public IGameObject? SearchById(ulong gameObjectId)
-        {
-            return _safeGameObjectByGameObjectId[gameObjectId];
+        public IGameObject? SearchById(ulong gameObjectId) {
+            if (_safeGameObjectByGameObjectId.ContainsKey(gameObjectId)) {
+                return _safeGameObjectByGameObjectId[gameObjectId];
+            } else {
+                return null;
+            }
         }
 
-        public IGameObject? SearchByEntityId(uint entityId)
-        {
-            return _safeGameObjectByEntityId[entityId];
+        public IGameObject? SearchByEntityId(uint entityId) {
+            if (_safeGameObjectByEntityId.ContainsKey(entityId)) {
+                return _safeGameObjectByEntityId[entityId];
+            } else {
+                return null;
+            }
         }
 
-        public nint GetObjectAddress(int index)
-        {
-            return _safeGameObjectByIndex[index].Address;
+        public nint GetObjectAddress(int index) {
+            if (_safeGameObjectByIndex.ContainsKey(index)) {
+                return _safeGameObjectByIndex[index].Address;
+            } else {
+                return 0;
+            }
         }
 
-        public IGameObject? CreateObjectReference(nint address)
-        {
+        public IGameObject? CreateObjectReference(nint address) {
             return _objectTable.CreateObjectReference(address);
         }
 
-        public IEnumerator<IGameObject> GetEnumerator()
-        {
+        public IEnumerator<IGameObject> GetEnumerator() {
             return SafeGameObjectDictionary.Values.GetEnumerator();
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
+        IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
             _framework.Update -= _framework_Update;
         }
     }

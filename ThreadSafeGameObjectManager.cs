@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
+namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 {
     public class ThreadSafeGameObjectManager : IObjectTable, IDisposable
     {
@@ -74,7 +74,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                     }
                     else if (_localPlayer == null)
                     {
-                        _localPlayer = new ThreadSafeGameObject(_clientState.LocalPlayer);
+                        _localPlayer = new ThreadSafeGameObject(framework, _clientState.LocalPlayer);
                     }
                     else
                     {
@@ -106,11 +106,11 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                 }
             }
         }
-        public static ThreadSafeGameObject GetThreadSafeGameObject(IGameObject gameObject, bool isTarget)
+        public static ThreadSafeGameObject GetThreadSafeGameObject(IFramework framework, IGameObject gameObject, bool isTarget)
         {
             if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address))
             {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject, true);
+                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(framework, gameObject, isTarget);
             }
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }
@@ -120,7 +120,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
             ThreadSafeGameObject value = null;
             if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address))
             {
-                _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(gameObject);
+                _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_framework, gameObject);
                 value = _safeGameObjectDictionary[gameObject.Address];
             }
             else

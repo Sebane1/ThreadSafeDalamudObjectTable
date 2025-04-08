@@ -3,13 +3,14 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.ClientState.Statuses;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using System;
 using System.Numerics;
 
-namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
+namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 {
     public class ThreadSafeGameObject : IGameObject, ICharacter, IPlayerCharacter
     {
@@ -50,6 +51,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         private Vector3 _getMapCoordinates;
         private uint _ownerId;
         private bool _isTargetable;
+        private ICharacter? _character;
         private ObjectKind _objectKind;
         private DateTime _lastUpdated;
         private RowRef<World> _currentWorld;
@@ -63,84 +65,85 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
         private float _currentCastTime;
         private float _baseCastTime;
         private float _totalCastTime;
+        private IFramework _framework;
+        private IGameObject _gameObject;
+        private IPlayerCharacter? _playerCharacter;
 
-        public ThreadSafeGameObject(IGameObject gameObject, bool isTarget = false)
+        internal ThreadSafeGameObject(IFramework framework, IGameObject gameObject, bool isTarget = false)
         {
+            _framework = framework;
             UpdateData(gameObject, isTarget);
         }
-        public ThreadSafeGameObject()
-        {
 
-        }
-
-        public nint Address { get => _address; }
-        public SeString Name { get => _name; }
-        public Vector3 Position { get => _position; }
-        public float Rotation { get => _rotation; }
-        public uint DataId { get => _dataId; }
-        public uint EntityId { get => _entityId; }
-        public ulong GameObjectId { get => _gameObjectId; }
-        public byte[] Customize { get => _customize; }
-        public RowRef<ClassJob> ClassJob { get => _classJob; }
-        public SeString CompanyTag { get => _companyTag; }
-        public uint CurrentCp { get => _currentCp; }
-        public uint CurrentMp { get => _currentMp; }
-        public uint CurrentGp { get => _currentGp; }
-        public uint CurrentHp { get => _currentHp; }
-        public RowRef<Lumina.Excel.Sheets.Companion>? CurrentMinion { get => _currentMinion; }
-        public uint NameId { get => _nameId; }
-        public float HitboxRadius { get => _hitboxRadius; }
-        public bool IsDead { get => _isDead; }
-        public ushort ObjectIndex { get => _objectIndex; }
-        public byte ShieldPercentage { get => _shieldPercentage; }
-        public StatusFlags StatusFlags { get => _statusFlags; }
-        public RowRef<OnlineStatus> OnlineStatus { get => _onlineStatus; }
-        public byte SubKind { get => _subKind; }
+        public nint Address { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Address : _address; }
+        public SeString Name { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Name : _name; }
+        public Vector3 Position { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Position : _position; }
+        public float Rotation { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Rotation : _rotation; }
+        public uint DataId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.DataId : _dataId; }
+        public uint EntityId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.EntityId : _entityId; }
+        public ulong GameObjectId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.GameObjectId : _gameObjectId; }
+        public byte[] Customize { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Customize : _customize; }
+        public RowRef<ClassJob> ClassJob { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.ClassJob : _classJob; }
+        public SeString CompanyTag { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CompanyTag : _companyTag; }
+        public uint CurrentCp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentCp : _currentCp; }
+        public uint CurrentMp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentMp : _currentMp; }
+        public uint CurrentGp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentGp : _currentGp; }
+        public uint CurrentHp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentHp : _currentHp; }
+        public RowRef<Lumina.Excel.Sheets.Companion>? CurrentMinion { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentMinion : _currentMinion; }
+        public uint NameId { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.NameId : _nameId; }
+        public float HitboxRadius { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.HitboxRadius : _hitboxRadius; }
+        public bool IsDead { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.IsDead : _isDead; }
+        public ushort ObjectIndex { get => _framework.IsInFrameworkUpdateThread ? _gameObject.ObjectIndex : _objectIndex; }
+        public byte ShieldPercentage { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.ShieldPercentage : _shieldPercentage; }
+        public StatusFlags StatusFlags { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.StatusFlags : _statusFlags; }
+        public RowRef<OnlineStatus> OnlineStatus { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.OnlineStatus : _onlineStatus; }
+        public byte SubKind { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.SubKind : _subKind; }
         public ThreadSafeGameObject? TargetObject { get => _targetObject; }
-        public ulong TargetObjectId { get => _targetObjectId; }
-        public byte YalmDistanceX { get => _yalmDistanceX; }
-        public byte YalmDistanceZ { get => _yalmDistanceZ; }
-        public Vector3 GetMapCoordinates { get => _getMapCoordinates; }
-        public byte Level { get => _level; }
-        public bool IsTargetable { get => _isTargetable; }
+        public ulong TargetObjectId { get => _framework.IsFrameworkUnloading && _gameObject != null ? _gameObject.TargetObjectId : _targetObjectId; }
+        public byte YalmDistanceX { get => _framework.IsFrameworkUnloading && _gameObject != null ? _gameObject.YalmDistanceX : _yalmDistanceX; }
+        public byte YalmDistanceZ { get => _framework.IsFrameworkUnloading && _gameObject != null ? _gameObject.YalmDistanceZ : _yalmDistanceZ; }
+        public Vector3 GetMapCoordinates { get => _framework.IsInFrameworkUpdateThread ? _gameObject.GetMapCoordinates() : _getMapCoordinates; }
+        public byte Level { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Level : _level; }
+        public bool IsTargetable { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.IsTargetable : _isTargetable; }
 
-        public uint OwnerId => _ownerId;
-        public ObjectKind ObjectKind => _objectKind;
+        public uint OwnerId => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.OwnerId : _ownerId;
+        public ObjectKind ObjectKind => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.ObjectKind : _objectKind;
 
-        IGameObject? IGameObject.TargetObject => TargetObject;
+        IGameObject? IGameObject.TargetObject => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.TargetObject : TargetObject;
 
-        public uint MaxHp { get => _maxHp; set => _maxHp = value; }
-        public uint MaxMp { get => _maxMp; set => _maxMp = value; }
-        public uint MaxGp { get => _maxGp; set => _maxGp = value; }
-        public uint MaxCp { get => _maxCp; set => _maxCp = value; }
-        public RowRef<Mount>? CurrentMount { get => _currentMount; set => _currentMount = value; }
+        public uint MaxHp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.MaxHp : _maxHp; }
+        public uint MaxMp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.MaxMp : _maxMp; }
+        public uint MaxGp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.MaxGp : _maxGp; }
+        public uint MaxCp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.MaxCp : _maxCp; }
+        public RowRef<Mount>? CurrentMount { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentMount : _currentMount; }
 
 
-        public RowRef<World> HomeWorld => _homeWorld;
+        public RowRef<World> HomeWorld => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.HomeWorld : _homeWorld;
 
-        public StatusList StatusList => _statusList;
+        public StatusList StatusList => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.StatusList : _statusList;
 
-        public bool IsCasting => _isCasting;
+        public bool IsCasting => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.IsCasting : _isCasting;
 
-        public bool IsCastInterruptible => _isCastInterruptible;
+        public bool IsCastInterruptible => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.IsCastInterruptible : _isCastInterruptible;
 
-        public byte CastActionType => _castActionType;
+        public byte CastActionType => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CastActionType : _castActionType;
 
-        public uint CastActionId => _castActionId;
+        public uint CastActionId => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CastActionId : _castActionId;
 
-        public ulong CastTargetObjectId => _castTargetObjectId;
+        public ulong CastTargetObjectId => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CastTargetObjectId : _castTargetObjectId;
 
-        public float CurrentCastTime => _currentCastTime;
+        public float CurrentCastTime => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CurrentCastTime : _currentCastTime;
 
-        public float BaseCastTime => _baseCastTime;
+        public float BaseCastTime => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.BaseCastTime : _baseCastTime;
 
-        public float TotalCastTime => _totalCastTime;
+        public float TotalCastTime => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.TotalCastTime : _totalCastTime;
 
-        public RowRef<World> CurrentWorld { get => _currentWorld; set => _currentWorld = value; }
+        public RowRef<World> CurrentWorld { get => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CurrentWorld : _currentWorld; }
 
-        public void UpdateData(IGameObject gameObject, bool isTarget = false)
+        internal void UpdateData(IGameObject gameObject, bool isTarget = false)
         {
-            if (gameObject != null)
+            _gameObject = gameObject;
+            if (gameObject != null && _framework.IsInFrameworkUpdateThread)
             {
                 try
                 {
@@ -165,7 +168,7 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                     {
                         if (gameObject.TargetObject != null)
                         {
-                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(gameObject.TargetObject, true);
+                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(_framework, gameObject.TargetObject, true);
                         }
                         else
                         {
@@ -174,42 +177,42 @@ namespace DragAndDropTexturing.ThreadSafeDalamudObjectTable
                     }
                     _isTargetable = gameObject.IsTargetable;
 
-                    ICharacter character = gameObject as ICharacter;
-                    if (character != null)
+                    _character = gameObject as ICharacter;
+                    if (_character != null)
                     {
-                        _customize = character.Customize;
-                        _classJob = character.ClassJob;
-                        _companyTag = character.CompanyTag;
-                        _currentCp = character.CurrentCp;
-                        _currentMp = character.CurrentMp;
-                        _currentGp = character.CurrentGp;
-                        _currentHp = character.CurrentHp;
-                        _maxHp = character.MaxHp;
-                        _maxMp = character.MaxMp;
-                        _maxGp = character.MaxGp;
-                        _maxCp = character.MaxCp;
-                        _currentMinion = character.CurrentMinion;
-                        _nameId = character.NameId;
-                        _shieldPercentage = character.ShieldPercentage;
-                        _statusFlags = character.StatusFlags;
-                        _onlineStatus = character.OnlineStatus;
-                        _level = character.Level;
-                        _currentMount = character.CurrentMount;
+                        _customize = _character.Customize;
+                        _classJob = _character.ClassJob;
+                        _companyTag = _character.CompanyTag;
+                        _currentCp = _character.CurrentCp;
+                        _currentMp = _character.CurrentMp;
+                        _currentGp = _character.CurrentGp;
+                        _currentHp = _character.CurrentHp;
+                        _maxHp = _character.MaxHp;
+                        _maxMp = _character.MaxMp;
+                        _maxGp = _character.MaxGp;
+                        _maxCp = _character.MaxCp;
+                        _currentMinion = _character.CurrentMinion;
+                        _nameId = _character.NameId;
+                        _shieldPercentage = _character.ShieldPercentage;
+                        _statusFlags = _character.StatusFlags;
+                        _onlineStatus = _character.OnlineStatus;
+                        _level = _character.Level;
+                        _currentMount = _character.CurrentMount;
                     }
-                    IPlayerCharacter playerCharacter = gameObject as IPlayerCharacter;
-                    if (playerCharacter != null)
+                    _playerCharacter = gameObject as IPlayerCharacter;
+                    if (_playerCharacter != null)
                     {
-                        _currentWorld = playerCharacter.CurrentWorld;
-                        _homeWorld = playerCharacter.HomeWorld;
-                        _statusList = playerCharacter.StatusList;
-                        _isCasting = playerCharacter.IsCasting;
-                        _isCastInterruptible = playerCharacter.IsCastInterruptible;
-                        _castActionType = playerCharacter.CastActionType;
-                        _castActionId = playerCharacter.CastActionId;
-                        _castTargetObjectId = playerCharacter.CastTargetObjectId;
-                        _currentCastTime = playerCharacter.CurrentCastTime;
-                        _baseCastTime = playerCharacter.BaseCastTime;
-                        _totalCastTime = playerCharacter.TotalCastTime;
+                        _currentWorld = _playerCharacter.CurrentWorld;
+                        _homeWorld = _playerCharacter.HomeWorld;
+                        _statusList = _playerCharacter.StatusList;
+                        _isCasting = _playerCharacter.IsCasting;
+                        _isCastInterruptible = _playerCharacter.IsCastInterruptible;
+                        _castActionType = _playerCharacter.CastActionType;
+                        _castActionId = _playerCharacter.CastActionId;
+                        _castTargetObjectId = _playerCharacter.CastTargetObjectId;
+                        _currentCastTime = _playerCharacter.CurrentCastTime;
+                        _baseCastTime = _playerCharacter.BaseCastTime;
+                        _totalCastTime = _playerCharacter.TotalCastTime;
                     }
                     _lastUpdated = DateTime.Now;
                 }

@@ -96,10 +96,17 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                         var value = _safeGameObjectDictionary.ElementAt(i);
                         if (!value.Value.IsValid())
                         {
-                            _safeGameObjectDictionary.TryRemove(value.Key, out var threadSafeGameObject);
-                            _safeGameObjectByIndex.TryRemove(value.Value.ObjectIndex, out threadSafeGameObject);
-                            _safeGameObjectByEntityId.TryRemove(value.Value.EntityId, out threadSafeGameObject);
-                            _safeGameObjectByGameObjectId.TryRemove(value.Value.GameObjectId, out threadSafeGameObject);
+                            try
+                            {
+                                _safeGameObjectDictionary.TryRemove(value.Key, out var threadSafeGameObject);
+                                _safeGameObjectByIndex.TryRemove(value.Value.ObjectIndex, out threadSafeGameObject);
+                                _safeGameObjectByEntityId.TryRemove(value.Value.EntityId, out threadSafeGameObject);
+                                _safeGameObjectByGameObjectId.TryRemove(value.Value.GameObjectId, out threadSafeGameObject);
+                            }
+                            catch
+                            {
+
+                            }
                         }
                     }
                     _rateLimitTimer.Restart();

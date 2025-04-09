@@ -79,9 +79,9 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         public SeString Name { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Name : _name; }
         public Vector3 Position { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Position : _position; }
         public float Rotation { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Rotation : _rotation; }
-        public uint DataId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.DataId : _dataId; }
-        public uint EntityId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.EntityId : _entityId; }
-        public ulong GameObjectId { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.GameObjectId : _gameObjectId; }
+        public uint DataId { get => _dataId; }
+        public uint EntityId { get => _entityId; }
+        public ulong GameObjectId { get => _gameObjectId; }
         public byte[] Customize { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Customize : _customize; }
         public RowRef<ClassJob> ClassJob { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.ClassJob : _classJob; }
         public SeString CompanyTag { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CompanyTag : _companyTag; }

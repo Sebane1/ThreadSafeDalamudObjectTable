@@ -28,6 +28,9 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         public nint Address => _address;
 
         public int Length => _length;
+
+        public int UpdateRate { get => _updateRate; set => _updateRate = value; }
+
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
         private IClientState _clientState;
@@ -36,7 +39,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         private IPluginLog _pluginLog;
 
         Stopwatch _rateLimitTimer = new Stopwatch();
-        int _updateRate = 50;
+        int _updateRate = 80;
         private ThreadSafeGameObject _localPlayer;
         private nint _address;
         private int _length;

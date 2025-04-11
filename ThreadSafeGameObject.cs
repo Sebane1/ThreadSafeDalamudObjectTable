@@ -143,7 +143,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         internal void UpdateData(IGameObject gameObject, bool isTarget = false)
         {
             _gameObject = gameObject;
-            if (gameObject != null && _framework.IsInFrameworkUpdateThread)
+            if (_framework.IsInFrameworkUpdateThread && gameObject != null)
             {
                 try
                 {

@@ -10,10 +10,8 @@ using Lumina.Excel.Sheets;
 using System;
 using System.Numerics;
 
-namespace GameObjectHelper.ThreadSafeDalamudObjectTable
-{
-    public class ThreadSafeGameObject : IGameObject, ICharacter, IPlayerCharacter
-    {
+namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
+    public class ThreadSafeGameObject : IGameObject, ICharacter, IPlayerCharacter {
         string _json = "";
         private nint _address;
         private SeString _name;
@@ -67,12 +65,12 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         private float _totalCastTime;
         private IFramework _framework;
         private IGameObject _gameObject;
+        private ThreadSafeGameObjectManager _parent;
         private IPlayerCharacter? _playerCharacter;
 
-        internal ThreadSafeGameObject(IFramework framework, IGameObject gameObject, bool isTarget = false)
-        {
+        internal ThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget = false) {
             _framework = framework;
-            UpdateData(gameObject, isTarget);
+            UpdateData(parent, gameObject, isTarget);
         }
 
         public nint Address { get => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _gameObject.Address : _address; }
@@ -140,13 +138,11 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
         public RowRef<World> CurrentWorld { get => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CurrentWorld : _currentWorld; }
 
-        internal void UpdateData(IGameObject gameObject, bool isTarget = false)
-        {
+        internal void UpdateData(ThreadSafeGameObjectManager parent, IGameObject gameObject, bool isTarget = false) {
             _gameObject = gameObject;
-            if (_framework.IsInFrameworkUpdateThread && gameObject != null)
-            {
-                try
-                {
+            _parent = parent;
+            if (_framework.IsInFrameworkUpdateThread && gameObject != null) {
+                try {
                     _address = gameObject.Address;
                     _name = gameObject.Name.TextValue;
                     _position = gameObject.Position;
@@ -164,22 +160,17 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                     _getMapCoordinates = gameObject.GetMapCoordinates();
                     _ownerId = gameObject.OwnerId;
                     _objectKind = gameObject.ObjectKind;
-                    if (!isTarget)
-                    {
-                        if (gameObject.TargetObject != null)
-                        {
-                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(_framework, gameObject.TargetObject, true);
-                        }
-                        else
-                        {
+                    if (!isTarget) {
+                        if (gameObject.TargetObject != null) {
+                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(parent, _framework, gameObject.TargetObject, true);
+                        } else {
                             _targetObject = null;
                         }
                     }
                     _isTargetable = gameObject.IsTargetable;
 
                     _character = gameObject as ICharacter;
-                    if (_character != null)
-                    {
+                    if (_character != null) {
                         _customize = _character.Customize;
                         _classJob = _character.ClassJob;
                         _companyTag = _character.CompanyTag;
@@ -200,8 +191,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                         _currentMount = _character.CurrentMount;
                     }
                     _playerCharacter = gameObject as IPlayerCharacter;
-                    if (_playerCharacter != null)
-                    {
+                    if (_playerCharacter != null) {
                         _currentWorld = _playerCharacter.CurrentWorld;
                         _homeWorld = _playerCharacter.HomeWorld;
                         _statusList = _playerCharacter.StatusList;
@@ -215,19 +205,16 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                         _totalCastTime = _playerCharacter.TotalCastTime;
                     }
                     _lastUpdated = DateTime.Now;
-                }
-                catch { }
+                } catch { }
             }
         }
 
-        public bool IsValid()
-        {
+        public bool IsValid() {
             TimeSpan ts = DateTime.Now - _lastUpdated;
-            return ts.TotalSeconds < 10;
+            return ts.Milliseconds < _parent.UpdateRate + 10;
         }
 
-        public bool Equals(IGameObject? other)
-        {
+        public bool Equals(IGameObject? other) {
             return other.Address == Address;
         }
     }

@@ -204,13 +204,13 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                         _baseCastTime = _playerCharacter.BaseCastTime;
                         _totalCastTime = _playerCharacter.TotalCastTime;
                     }
-                    _lastUpdated = DateTime.Now;
+                    _lastUpdated = DateTime.UtcNow;
                 } catch { }
             }
         }
 
         public bool IsValid() {
-            TimeSpan ts = DateTime.Now - _lastUpdated;
+            TimeSpan ts = DateTime.UtcNow - _lastUpdated;
             return ts.Milliseconds < _parent.UpdateRate + 10;
         }
 

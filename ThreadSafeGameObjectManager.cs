@@ -44,7 +44,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         private int _length;
         bool _pauseTrackingForNonLocalPlayerObjects;
         bool _onlyTrackCharacterObjects = false;
-        bool _doProfiling = true;
+        bool _doProfiling = false;
         private Stopwatch _performanceTimer;
 
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog) {

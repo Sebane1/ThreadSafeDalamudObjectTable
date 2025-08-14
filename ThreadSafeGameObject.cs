@@ -65,7 +65,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         private float _totalCastTime;
         private IFramework _framework;
         private IGameObject _gameObject;
-        private ThreadSafeGameObjectManager _parent;
+        private ThreadSafeGameObjectManager _instance;
         private IPlayerCharacter? _playerCharacter;
 
         internal ThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget = false) {
@@ -137,10 +137,11 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public float TotalCastTime => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.TotalCastTime : _totalCastTime;
 
         public RowRef<World> CurrentWorld { get => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CurrentWorld : _currentWorld; }
+        public ThreadSafeGameObjectManager Instance { get => _instance; set => _instance = value; }
 
         internal void UpdateData(ThreadSafeGameObjectManager parent, IGameObject gameObject, bool isTarget = false) {
             _gameObject = gameObject;
-            _parent = parent;
+            _instance = parent;
             if (_framework.IsInFrameworkUpdateThread && gameObject != null) {
                 try {
                     _address = gameObject.Address;
@@ -162,7 +163,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                     _objectKind = gameObject.ObjectKind;
                     if (!isTarget) {
                         if (gameObject.TargetObject != null) {
-                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(parent, _framework, gameObject.TargetObject, true);
+                            _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(gameObject.TargetObject, true);
                         } else {
                             _targetObject = null;
                         }
@@ -211,7 +212,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
 
         public bool IsValid() {
             TimeSpan ts = DateTime.UtcNow - _lastUpdated;
-            return ts.Milliseconds < _parent.UpdateRate + 10;
+            return ts.Milliseconds < _instance.UpdateRate + 10;
         }
 
         public bool Equals(IGameObject? other) {

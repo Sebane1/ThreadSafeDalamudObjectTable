@@ -30,12 +30,24 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public bool OnlyTrackCharacterObjects { get => _onlyTrackCharacterObjects; set => _onlyTrackCharacterObjects = value; }
         public bool DoProfiling { get => _doProfiling; set => _doProfiling = value; }
 
+        public IEnumerable<IBattleChara> PlayerObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> CharacterManagerObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> ClientObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> EventObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> StandObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> ReactionEventObjects => throw new NotImplementedException();
+
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
         private IClientState _clientState;
         private IObjectTable _objectTable;
-        private IFramework _framework;
-        private IPluginLog _pluginLog;
+        private static IFramework _framework;
+        private static IPluginLog _pluginLog;
 
         Stopwatch _rateLimitTimer = new Stopwatch();
         int _updateRate = 80;
@@ -46,6 +58,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         bool _onlyTrackCharacterObjects = false;
         bool _doProfiling = true;
         private Stopwatch _performanceTimer;
+        private static ThreadSafeGameObjectManager _parent;
 
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog) {
             _clientState = clientState;
@@ -56,6 +69,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _rateLimitTimer.Start();
             _performanceTimer = new Stopwatch();
+            _parent = this;
         }
 
         private void _clientState_TerritoryChanged(ushort obj) {
@@ -111,9 +125,9 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                 _pluginLog.Verbose("Object Table copy took " + _performanceTimer.ElapsedMilliseconds + "ms");
             }
         }
-        public static ThreadSafeGameObject GetThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget) {
+        public static ThreadSafeGameObject GetThreadSafeGameObject(IGameObject gameObject, bool isTarget) {
             if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address)) {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(parent, framework, gameObject, isTarget);
+                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
             }
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }

@@ -46,8 +46,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
 
         private IClientState _clientState;
         private IObjectTable _objectTable;
-        private IFramework _framework;
-        private IPluginLog _pluginLog;
+        private static IFramework _framework;
+        private static IPluginLog _pluginLog;
 
         Stopwatch _rateLimitTimer = new Stopwatch();
         int _updateRate = 80;
@@ -58,6 +58,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         bool _onlyTrackCharacterObjects = false;
         bool _doProfiling = false;
         private Stopwatch _performanceTimer;
+        private static ThreadSafeGameObjectManager _parent;
 
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog) {
             _clientState = clientState;
@@ -68,6 +69,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _rateLimitTimer.Start();
             _performanceTimer = new Stopwatch();
+            _parent = this;
         }
 
         private void _clientState_TerritoryChanged(ushort obj) {
@@ -123,9 +125,9 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                 _pluginLog.Verbose("Object Table copy took " + _performanceTimer.ElapsedMilliseconds + "ms");
             }
         }
-        public static ThreadSafeGameObject GetThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget) {
+        public static ThreadSafeGameObject GetThreadSafeGameObject(IGameObject gameObject, bool isTarget) {
             if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address)) {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(parent, framework, gameObject, isTarget);
+                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
             }
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }

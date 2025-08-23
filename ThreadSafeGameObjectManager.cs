@@ -30,6 +30,18 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public bool OnlyTrackCharacterObjects { get => _onlyTrackCharacterObjects; set => _onlyTrackCharacterObjects = value; }
         public bool DoProfiling { get => _doProfiling; set => _doProfiling = value; }
 
+        public IEnumerable<IBattleChara> PlayerObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> CharacterManagerObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> ClientObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> EventObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> StandObjects => throw new NotImplementedException();
+
+        public IEnumerable<IGameObject> ReactionEventObjects => throw new NotImplementedException();
+
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
         private IClientState _clientState;

@@ -67,6 +67,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         private IGameObject _gameObject;
         private ThreadSafeGameObjectManager _instance;
         private IPlayerCharacter? _playerCharacter;
+        private uint _baseId;
 
         internal ThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget = false) {
             _framework = framework;
@@ -139,6 +140,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public RowRef<World> CurrentWorld { get => _framework.IsInFrameworkUpdateThread && _playerCharacter != null ? _playerCharacter.CurrentWorld : _currentWorld; }
         public ThreadSafeGameObjectManager Instance { get => _instance; set => _instance = value; }
 
+        public uint BaseId => _framework.IsInFrameworkUpdateThread && _gameObject != null ? _playerCharacter.BaseId : _baseId;
+
         internal void UpdateData(ThreadSafeGameObjectManager parent, IGameObject gameObject, bool isTarget = false) {
             _gameObject = gameObject;
             _instance = parent;
@@ -161,6 +164,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                     _getMapCoordinates = gameObject.GetMapCoordinates();
                     _ownerId = gameObject.OwnerId;
                     _objectKind = gameObject.ObjectKind;
+                    _baseId = gameObject.BaseId;
                     if (!isTarget) {
                         if (gameObject.TargetObject != null) {
                             _targetObject = ThreadSafeGameObjectManager.GetThreadSafeGameObject(gameObject.TargetObject, true);

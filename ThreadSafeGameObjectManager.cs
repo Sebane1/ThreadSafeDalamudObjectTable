@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using System;
@@ -45,6 +46,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         public IEnumerable<IGameObject> StandObjects => _objectTable.StandObjects;
 
         public IEnumerable<IGameObject> ReactionEventObjects => _objectTable.ReactionEventObjects;
+
+        IPlayerCharacter? IObjectTable.LocalPlayer => LocalPlayer;
 
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
@@ -97,13 +100,13 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                 {
                     _address = _objectTable.Address;
                     _length = _objectTable.Length;
-                    if (_clientState.LocalPlayer == null)
+                    if (_objectTable.LocalPlayer == null)
                     {
                         _localPlayer = null;
                     }
                     else if (_localPlayer == null)
                     {
-                        _localPlayer = new ThreadSafeGameObject(this, framework, _clientState.LocalPlayer);
+                        _localPlayer = new ThreadSafeGameObject(this, framework, _objectTable.LocalPlayer);
                     }
                     else
                     {

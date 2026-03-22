@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Customize;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -21,6 +22,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         private uint _entityId;
         private ulong _gameObjectId;
         private byte[] _customize;
+        private ICustomizeData _customizeData;
         private RowRef<ClassJob> _classJob;
         private SeString _companyTag;
         private uint _currentCp;
@@ -82,6 +84,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public uint EntityId { get => _entityId; }
         public ulong GameObjectId { get => _gameObjectId; }
         public byte[] Customize { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Customize : _customize; }
+        public ICustomizeData CustomizeData { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CustomizeData : _customizeData; }
         public RowRef<ClassJob> ClassJob { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.ClassJob : _classJob; }
         public SeString CompanyTag { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CompanyTag : _companyTag; }
         public uint CurrentCp { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CurrentCp : _currentCp; }
@@ -177,6 +180,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                     _character = gameObject as ICharacter;
                     if (_character != null) {
                         _customize = _character.Customize;
+                        _customizeData = _character.CustomizeData;
                         _classJob = _character.ClassJob;
                         _companyTag = _character.CompanyTag;
                         _currentCp = _character.CurrentCp;

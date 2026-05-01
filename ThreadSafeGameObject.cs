@@ -83,7 +83,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public uint DataId { get => _dataId; }
         public uint EntityId { get => _entityId; }
         public ulong GameObjectId { get => _gameObjectId; }
-        public byte[] Customize { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Customize : _customize; }
+        public Span<byte> Customize { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.Customize : _customize; }
         public ICustomizeData CustomizeData { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CustomizeData : _customizeData; }
         public RowRef<ClassJob> ClassJob { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.ClassJob : _classJob; }
         public SeString CompanyTag { get => _framework.IsInFrameworkUpdateThread && _character != null ? _character.CompanyTag : _companyTag; }
@@ -179,7 +179,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
 
                     _character = gameObject as ICharacter;
                     if (_character != null) {
-                        _customize = _character.Customize;
+                        _customize = _character.Customize.ToArray();
                         _customizeData = _character.CustomizeData;
                         _classJob = _character.ClassJob;
                         _companyTag = _character.CompanyTag;

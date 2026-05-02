@@ -80,7 +80,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             _parent = this;
         }
 
-        private void _clientState_TerritoryChanged(ushort obj)
+        private void _clientState_TerritoryChanged(uint obj)
         {
             _safeGameObjectDictionary.Clear();
             _safeGameObjectByIndex.Clear();
@@ -110,7 +110,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                     }
                     else
                     {
-                        _localPlayer.UpdateData(this, _clientState.LocalPlayer);
+                        _localPlayer.UpdateData(this, _objectTable.LocalPlayer);
                     }
                     if (!_pauseTrackingForNonLocalPlayerObjects)
                     {

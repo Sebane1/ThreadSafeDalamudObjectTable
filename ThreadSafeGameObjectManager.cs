@@ -24,6 +24,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             }
         }
 
+        public IObjectTable DalamudObjectTable => _objectTable;
+
         public static ConcurrentDictionary<nint, ThreadSafeGameObject> SafeGameObjectDictionary { get => _safeGameObjectDictionary; set => _safeGameObjectDictionary = value; }
 
         public nint Address => _address;
@@ -82,6 +84,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
         private void _clientState_TerritoryChanged(uint obj)
         {
+            _localPlayer = null;
             _safeGameObjectDictionary.Clear();
             _safeGameObjectByIndex.Clear();
             _safeGameObjectByEntityId.Clear();

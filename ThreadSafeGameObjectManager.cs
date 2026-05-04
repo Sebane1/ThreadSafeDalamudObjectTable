@@ -68,6 +68,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         bool _doProfiling = false;
         private Stopwatch _performanceTimer;
         private static ThreadSafeGameObjectManager _parent;
+        private volatile bool _loggedOut;
 
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog)
         {
@@ -77,9 +78,26 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             _pluginLog = pluginLog;
             _framework.Update += _framework_Update;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
+            _clientState.Logout += _clientState_Logout;
+            _clientState.Login += _clientState_Login;
             _rateLimitTimer.Start();
             _performanceTimer = new Stopwatch();
             _parent = this;
+        }
+
+        private void _clientState_Logout(int type, int code)
+        {
+            _loggedOut = true;
+            _localPlayer = null;
+            _safeGameObjectDictionary.Clear();
+            _safeGameObjectByIndex.Clear();
+            _safeGameObjectByEntityId.Clear();
+            _safeGameObjectByGameObjectId.Clear();
+        }
+
+        private void _clientState_Login()
+        {
+            _loggedOut = false;
         }
 
         private void _clientState_TerritoryChanged(uint obj)
@@ -97,39 +115,62 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             {
                 _performanceTimer.Restart();
             }
-            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn)
+            if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn && !_loggedOut)
             {
                 if (_rateLimitTimer.ElapsedMilliseconds > _updateRate)
                 {
+                    // Validate that native object memory is still accessible.
+                    // LocalPlayer access dereferences native pointers — if the game
+                    // is between logout and the IsLoggedIn flag flip, this will AV.
+                    IPlayerCharacter nativeLocalPlayer = null;
+                    try
+                    {
+                        nativeLocalPlayer = _objectTable.LocalPlayer;
+                    }
+                    catch
+                    {
+                        // Native memory gone — bail out
+                        _localPlayer = null;
+                        _rateLimitTimer.Restart();
+                        return;
+                    }
+
                     _address = _objectTable.Address;
                     _length = _objectTable.Length;
-                    if (_objectTable.LocalPlayer == null)
+                    if (nativeLocalPlayer == null)
                     {
                         _localPlayer = null;
                     }
                     else if (_localPlayer == null)
                     {
-                        _localPlayer = new ThreadSafeGameObject(this, framework, _objectTable.LocalPlayer);
+                        _localPlayer = new ThreadSafeGameObject(this, framework, nativeLocalPlayer);
                     }
                     else
                     {
-                        _localPlayer.UpdateData(this, _objectTable.LocalPlayer);
+                        _localPlayer.UpdateData(this, nativeLocalPlayer);
                     }
                     if (!_pauseTrackingForNonLocalPlayerObjects)
                     {
-                        foreach (var gameObject in _objectTable)
+                        try
                         {
-                            try
+                            foreach (var gameObject in _objectTable)
                             {
-                                if (!_onlyTrackCharacterObjects || gameObject is ICharacter)
+                                try
                                 {
-                                    RefreshByManualProperties(gameObject);
+                                    if (!_onlyTrackCharacterObjects || gameObject is ICharacter)
+                                    {
+                                        RefreshByManualProperties(gameObject);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _pluginLog.Warning(ex, ex.Message);
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                _pluginLog.Warning(ex, ex.Message);
-                            }
+                        }
+                        catch
+                        {
+                            // Object table enumeration failed — native memory freed mid-iteration
                         }
                     }
                     for (int i = _safeGameObjectDictionary.Count - 1; i > 0; i--)
@@ -238,7 +279,11 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
         public void Dispose()
         {
+            _loggedOut = true;
             _framework.Update -= _framework_Update;
+            _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+            _clientState.Logout -= _clientState_Logout;
+            _clientState.Login -= _clientState_Login;
         }
     }
 }

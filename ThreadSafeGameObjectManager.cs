@@ -70,6 +70,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         private static ThreadSafeGameObjectManager _parent;
         private volatile bool _loggedOut;
 
+        private Stopwatch _loginGraceTimer = new Stopwatch();
+
         public ThreadSafeGameObjectManager(IClientState clientState, IObjectTable objectTable, IFramework framework, IPluginLog pluginLog)
         {
             _clientState = clientState;
@@ -98,6 +100,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         private void _clientState_Login()
         {
             _loggedOut = false;
+            _loginGraceTimer.Restart();
         }
 
         private void _clientState_TerritoryChanged(uint obj)
@@ -117,6 +120,11 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             }
             if (framework.IsInFrameworkUpdateThread && _clientState.IsLoggedIn && !_loggedOut)
             {
+                if (_loginGraceTimer.IsRunning && _loginGraceTimer.ElapsedMilliseconds < 3000)
+                {
+                    return; // Grace period to avoid partially constructed memory on login
+                }
+
                 if (_rateLimitTimer.ElapsedMilliseconds > _updateRate)
                 {
                     // Validate that native object memory is still accessible.
@@ -137,7 +145,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
                     _address = _objectTable.Address;
                     _length = _objectTable.Length;
-                    if (nativeLocalPlayer == null)
+                    if (nativeLocalPlayer == null || !nativeLocalPlayer.IsValid())
                     {
                         _localPlayer = null;
                     }
@@ -157,9 +165,12 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                             {
                                 try
                                 {
-                                    if (!_onlyTrackCharacterObjects || gameObject is ICharacter)
+                                    if (gameObject != null && gameObject.IsValid())
                                     {
-                                        RefreshByManualProperties(gameObject);
+                                        if (!_onlyTrackCharacterObjects || gameObject is ICharacter)
+                                        {
+                                            RefreshByManualProperties(gameObject);
+                                        }
                                     }
                                 }
                                 catch (Exception ex)

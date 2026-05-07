@@ -49,7 +49,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
         public IEnumerable<IGameObject> ReactionEventObjects => _objectTable.ReactionEventObjects;
 
-        IPlayerCharacter? IObjectTable.LocalPlayer => LocalPlayer;
+        IPlayerCharacter? IObjectTable.LocalPlayer => LocalPlayer as IPlayerCharacter;
 
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
@@ -151,7 +151,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                     }
                     else if (_localPlayer == null)
                     {
-                        _localPlayer = new ThreadSafeGameObject(this, framework, nativeLocalPlayer);
+                        _localPlayer = new ThreadSafePlayerCharacter(this, framework, nativeLocalPlayer);
                     }
                     else
                     {
@@ -214,7 +214,13 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         {
             if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address))
             {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
+                if (gameObject is IPlayerCharacter) {
+                    ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafePlayerCharacter(_parent, _framework, gameObject, isTarget);
+                } else if (gameObject is ICharacter) {
+                    ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeCharacter(_parent, _framework, gameObject, isTarget);
+                } else {
+                    ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
+                }
             }
             return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
         }
@@ -224,7 +230,13 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
             ThreadSafeGameObject value = null;
             if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address))
             {
-                _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(this, _framework, gameObject);
+                if (gameObject is IPlayerCharacter) {
+                    _safeGameObjectDictionary[gameObject.Address] = new ThreadSafePlayerCharacter(this, _framework, gameObject);
+                } else if (gameObject is ICharacter) {
+                    _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeCharacter(this, _framework, gameObject);
+                } else {
+                    _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(this, _framework, gameObject);
+                }
                 value = _safeGameObjectDictionary[gameObject.Address];
                 _safeGameObjectByEntityId[gameObject.EntityId] = value;
                 _safeGameObjectByGameObjectId[gameObject.GameObjectId] = value;

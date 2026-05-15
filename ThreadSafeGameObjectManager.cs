@@ -49,7 +49,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
 
         public IEnumerable<IGameObject> ReactionEventObjects => _objectTable.ReactionEventObjects;
 
-        IPlayerCharacter? IObjectTable.LocalPlayer => LocalPlayer;
+        IPlayerCharacter? IObjectTable.LocalPlayer => LocalPlayer as IPlayerCharacter;
 
         public IGameObject? this[int index] => _safeGameObjectByIndex[index];
 
@@ -151,7 +151,7 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                     }
                     else if (_localPlayer == null)
                     {
-                        _localPlayer = new ThreadSafeGameObject(this, framework, nativeLocalPlayer);
+                        _localPlayer = new ThreadSafePlayerCharacter(this, framework, nativeLocalPlayer);
                     }
                     else
                     {
@@ -213,17 +213,31 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         }
         public static ThreadSafeGameObject GetThreadSafeGameObject(IGameObject gameObject, bool isTarget)
         {
-            return ThreadSafeGameObjectManager.SafeGameObjectDictionary.GetOrAdd(
-                gameObject.Address, 
-                _ => new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget)
-            );
+            return ThreadSafeGameObjectManager.SafeGameObjectDictionary.GetOrAdd(gameObject.Address, _ =>
+            {
+                if (gameObject is IPlayerCharacter) {
+                    return new ThreadSafePlayerCharacter(_parent, _framework, gameObject, isTarget);
+                } else if (gameObject is ICharacter) {
+                    return new ThreadSafeCharacter(_parent, _framework, gameObject, isTarget);
+                } else {
+                    return new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
+                }
+            });
         }
 
         private void RefreshByManualProperties(IGameObject gameObject)
         {
             var value = _safeGameObjectDictionary.GetOrAdd(gameObject.Address, _ =>
             {
-                var newObj = new ThreadSafeGameObject(this, _framework, gameObject);
+                ThreadSafeGameObject newObj;
+                if (gameObject is IPlayerCharacter) {
+                    newObj = new ThreadSafePlayerCharacter(this, _framework, gameObject);
+                } else if (gameObject is ICharacter) {
+                    newObj = new ThreadSafeCharacter(this, _framework, gameObject);
+                } else {
+                    newObj = new ThreadSafeGameObject(this, _framework, gameObject);
+                }
+                
                 _safeGameObjectByEntityId[gameObject.EntityId] = newObj;
                 _safeGameObjectByGameObjectId[gameObject.GameObjectId] = newObj;
                 _safeGameObjectByIndex[gameObject.ObjectIndex] = newObj;

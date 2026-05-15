@@ -184,17 +184,18 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
                             // Object table enumeration failed — native memory freed mid-iteration
                         }
                     }
-                    for (int i = _safeGameObjectDictionary.Count - 1; i > 0; i--)
+                    foreach (var kvp in _safeGameObjectDictionary)
                     {
-                        var value = _safeGameObjectDictionary.ElementAt(i);
-                        if (!value.Value.IsValid())
+                        if (!kvp.Value.IsValid())
                         {
                             try
                             {
-                                _safeGameObjectDictionary.TryRemove(value.Key, out var threadSafeGameObject);
-                                _safeGameObjectByIndex.TryRemove(value.Value.ObjectIndex, out threadSafeGameObject);
-                                _safeGameObjectByEntityId.TryRemove(value.Value.EntityId, out threadSafeGameObject);
-                                _safeGameObjectByGameObjectId.TryRemove(value.Value.GameObjectId, out threadSafeGameObject);
+                                if (_safeGameObjectDictionary.TryRemove(kvp.Key, out var threadSafeGameObject) && threadSafeGameObject != null)
+                                {
+                                    _safeGameObjectByIndex.TryRemove(threadSafeGameObject.ObjectIndex, out _);
+                                    _safeGameObjectByEntityId.TryRemove(threadSafeGameObject.EntityId, out _);
+                                    _safeGameObjectByGameObjectId.TryRemove(threadSafeGameObject.GameObjectId, out _);
+                                }
                             }
                             catch
                             {
@@ -212,29 +213,27 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable
         }
         public static ThreadSafeGameObject GetThreadSafeGameObject(IGameObject gameObject, bool isTarget)
         {
-            if (!ThreadSafeGameObjectManager.SafeGameObjectDictionary.ContainsKey(gameObject.Address))
-            {
-                ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget);
-            }
-            return ThreadSafeGameObjectManager.SafeGameObjectDictionary[gameObject.Address];
+            return ThreadSafeGameObjectManager.SafeGameObjectDictionary.GetOrAdd(
+                gameObject.Address, 
+                _ => new ThreadSafeGameObject(_parent, _framework, gameObject, isTarget)
+            );
         }
 
         private void RefreshByManualProperties(IGameObject gameObject)
         {
-            ThreadSafeGameObject value = null;
-            if (!_safeGameObjectDictionary.ContainsKey(gameObject.Address))
+            var value = _safeGameObjectDictionary.GetOrAdd(gameObject.Address, _ =>
             {
-                _safeGameObjectDictionary[gameObject.Address] = new ThreadSafeGameObject(this, _framework, gameObject);
-                value = _safeGameObjectDictionary[gameObject.Address];
-                _safeGameObjectByEntityId[gameObject.EntityId] = value;
-                _safeGameObjectByGameObjectId[gameObject.GameObjectId] = value;
-                _safeGameObjectByIndex[gameObject.ObjectIndex] = value;
-            }
-            else
-            {
-                value = _safeGameObjectDictionary[gameObject.Address];
-                value.UpdateData(this, gameObject);
-            }
+                var newObj = new ThreadSafeGameObject(this, _framework, gameObject);
+                _safeGameObjectByEntityId[gameObject.EntityId] = newObj;
+                _safeGameObjectByGameObjectId[gameObject.GameObjectId] = newObj;
+                _safeGameObjectByIndex[gameObject.ObjectIndex] = newObj;
+                return newObj;
+            });
+
+            value.UpdateData(this, gameObject);
+            _safeGameObjectByEntityId[gameObject.EntityId] = value;
+            _safeGameObjectByGameObjectId[gameObject.GameObjectId] = value;
+            _safeGameObjectByIndex[gameObject.ObjectIndex] = value;
         }
 
         public IGameObject? SearchById(ulong gameObjectId)

@@ -29,6 +29,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         protected ulong _targetObjectId;
         protected byte _yalmDistanceX;
         protected byte _yalmDistanceZ;
+        protected byte _currentDistance;
+        protected byte _nextDistance;
         protected Vector3 _getMapCoordinates;
         protected uint _ownerId;
         protected bool _isTargetable;
@@ -61,6 +63,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public ulong TargetObjectId { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.TargetObjectId : _targetObjectId; }
         public byte YalmDistanceX { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.YalmDistanceX : _yalmDistanceX; }
         public byte YalmDistanceZ { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.YalmDistanceZ : _yalmDistanceZ; }
+        public byte CurrentDistance { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.CurrentDistance : _currentDistance; }
+        public byte NextDistance { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.NextDistance : _nextDistance; }
         public Vector3 GetMapCoordinates { get => UseLiveObject ? _gameObject.GetMapCoordinates() : _getMapCoordinates; }
         public bool IsTargetable { get => UseLiveObject ? _gameObject.IsTargetable : _isTargetable; }
 
@@ -91,6 +95,8 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                     _targetObjectId = gameObject.TargetObjectId;
                     _yalmDistanceX = gameObject.YalmDistanceX;
                     _yalmDistanceZ = gameObject.YalmDistanceZ;
+                    _currentDistance = gameObject.CurrentDistance;
+                    _nextDistance = gameObject.NextDistance;
                     _getMapCoordinates = gameObject.GetMapCoordinates();
                     _ownerId = gameObject.OwnerId;
                     _objectKind = gameObject.ObjectKind;

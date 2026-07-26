@@ -41,6 +41,22 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         protected ThreadSafeGameObjectManager _instance;
         protected uint _baseId;
 
+        private static bool _apiPropertiesChecked = false;
+        private static bool _hasSubKind = false;
+        private static bool _hasTargetObjectId = false;
+        private static bool _hasDistances = false;
+
+        private static void CheckApiProperties() {
+            if (!_apiPropertiesChecked) {
+                var type = typeof(IGameObject);
+                _hasSubKind = type.GetProperty("SubKind") != null;
+                var targetObjId = type.GetProperty("TargetObjectId");
+                _hasTargetObjectId = targetObjId != null && targetObjId.PropertyType == typeof(ulong);
+                _hasDistances = type.GetProperty("CurrentDistance") != null;
+                _apiPropertiesChecked = true;
+            }
+        }
+
         internal ThreadSafeGameObject(ThreadSafeGameObjectManager parent, IFramework framework, IGameObject gameObject, bool isTarget = false) {
             _framework = framework;
             UpdateData(parent, gameObject, isTarget);
@@ -58,13 +74,13 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
         public float HitboxRadius { get => UseLiveObject ? _gameObject.HitboxRadius : _hitboxRadius; }
         public bool IsDead { get => UseLiveObject ? _gameObject.IsDead : _isDead; }
         public ushort ObjectIndex { get => _objectIndex; }
-        public byte SubKind { get => UseLiveObject ? _gameObject.SubKind : _subKind; }
+        public byte SubKind { get { CheckApiProperties(); return _hasSubKind && UseLiveObject ? GetSubKindSafe(_gameObject) : _subKind; } }
         public ThreadSafeGameObject? TargetObject { get => _targetObject; }
-        public ulong TargetObjectId { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.TargetObjectId : _targetObjectId; }
-        public byte YalmDistanceX { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.YalmDistanceX : _yalmDistanceX; }
-        public byte YalmDistanceZ { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.YalmDistanceZ : _yalmDistanceZ; }
-        public byte CurrentDistance { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.CurrentDistance : _currentDistance; }
-        public byte NextDistance { get => _framework.IsFrameworkUnloading && UseLiveObject ? _gameObject.NextDistance : _nextDistance; }
+        public ulong TargetObjectId { get { CheckApiProperties(); return _framework.IsFrameworkUnloading && UseLiveObject && _hasTargetObjectId ? GetTargetObjectIdSafe(_gameObject) : _targetObjectId; } }
+        public byte YalmDistanceX { get { CheckApiProperties(); return _framework.IsFrameworkUnloading && UseLiveObject && _hasDistances ? GetYalmXSafe(_gameObject) : _yalmDistanceX; } }
+        public byte YalmDistanceZ { get { CheckApiProperties(); return _framework.IsFrameworkUnloading && UseLiveObject && _hasDistances ? GetYalmZSafe(_gameObject) : _yalmDistanceZ; } }
+        public byte CurrentDistance { get { CheckApiProperties(); return _framework.IsFrameworkUnloading && UseLiveObject && _hasDistances ? GetCurrentDistanceSafe(_gameObject) : _currentDistance; } }
+        public byte NextDistance { get { CheckApiProperties(); return _framework.IsFrameworkUnloading && UseLiveObject && _hasDistances ? GetNextDistanceSafe(_gameObject) : _nextDistance; } }
         public Vector3 GetMapCoordinates { get => UseLiveObject ? _gameObject.GetMapCoordinates() : _getMapCoordinates; }
         public bool IsTargetable { get => UseLiveObject ? _gameObject.IsTargetable : _isTargetable; }
 
@@ -91,12 +107,20 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                     _isDead = gameObject.IsDead;
                     _hitboxRadius = gameObject.HitboxRadius;
                     _objectIndex = gameObject.ObjectIndex;
-                    _subKind = gameObject.SubKind;
-                    _targetObjectId = gameObject.TargetObjectId;
-                    _yalmDistanceX = gameObject.YalmDistanceX;
-                    _yalmDistanceZ = gameObject.YalmDistanceZ;
-                    _currentDistance = gameObject.CurrentDistance;
-                    _nextDistance = gameObject.NextDistance;
+                    
+                    CheckApiProperties();
+                    if (_hasSubKind) { try { _subKind = GetSubKindSafe(gameObject); } catch { _subKind = 0; } }
+                    if (_hasTargetObjectId) { try { _targetObjectId = GetTargetObjectIdSafe(gameObject); } catch { _targetObjectId = 0; } }
+                    if (_hasDistances) {
+                        try {
+                            _yalmDistanceX = GetYalmXSafe(gameObject);
+                            _yalmDistanceZ = GetYalmZSafe(gameObject);
+                            _currentDistance = GetCurrentDistanceSafe(gameObject);
+                            _nextDistance = GetNextDistanceSafe(gameObject);
+                        } catch {
+                            _yalmDistanceX = 0; _yalmDistanceZ = 0; _currentDistance = 0; _nextDistance = 0;
+                        }
+                    }
                     _getMapCoordinates = gameObject.GetMapCoordinates();
                     _ownerId = gameObject.OwnerId;
                     _objectKind = gameObject.ObjectKind;
@@ -113,6 +137,19 @@ namespace GameObjectHelper.ThreadSafeDalamudObjectTable {
                 } catch { }
             }
         }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static byte GetSubKindSafe(IGameObject gameObject) => gameObject.SubKind;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static ulong GetTargetObjectIdSafe(IGameObject gameObject) => gameObject.TargetObjectId;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static byte GetYalmXSafe(IGameObject gameObject) => gameObject.YalmDistanceX;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static byte GetYalmZSafe(IGameObject gameObject) => gameObject.YalmDistanceZ;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static byte GetCurrentDistanceSafe(IGameObject gameObject) => gameObject.CurrentDistance;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static byte GetNextDistanceSafe(IGameObject gameObject) => gameObject.NextDistance;
 
         public bool IsValid() {
             TimeSpan ts = DateTime.UtcNow - _lastUpdated;
